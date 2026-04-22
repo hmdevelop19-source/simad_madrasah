@@ -1,0 +1,123 @@
+# ✅ Walkthrough: Fase 1 — Fondasi & Auth SIMAD
+
+*Selesai: 10 Maret 2026 | Status: BERHASIL SEMPURNA*
+
+---
+
+## Tampilan Aplikasi
+
+![Dashboard SIMAD setelah login](/Users/user/.gemini/antigravity/brain/d0774a0b-64ac-4dfe-83bd-c5f30f7e9a9e/simad_dashboard_view_1773098315536.png)
+
+![Rekaman flow login hingga dashboard](/Users/user/.gemini/antigravity/brain/d0774a0b-64ac-4dfe-83bd-c5f30f7e9a9e/simad_login_test_1773098218063.webp)
+
+---
+
+## Yang Dikerjakan
+
+### 1.1 — Fix Semua Models (13 model)
+
+Semua model yang kosong/error telah diperbaiki secara menyeluruh dengan **fillable**, **relasi Eloquent**, **$casts**, dan **SoftDeletes** yang lengkap.
+
+| Model | Bug Lama | Fix |
+|---|---|---|
+| [WaliSantri](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/WaliSantri.php#16-67) | Missing `use BelongsTo/HasMany` → Fatal Error | Tambah use statements + SoftDeletes + fillable |
+| [Student](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Student.php#20-101) | Tidak ada SoftDeletes, relasi kurang | Tambah SoftDeletes + relasi histories, attendances, grades |
+| [Teacher](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Teacher.php#20-63) | Model kosong total | Fillable + SoftDeletes + is_active + relasi user & assignments |
+| [User](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/User.php#24-112) | Fillable tidak ada `role`, `education_level_id` | Update fillable + helper method [isSuperAdmin()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/User.php#69-78), [isGuru()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/User.php#79-87) |
+| [AcademicYear](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/AcademicYear.php#15-68) | Model kosong | Fillable + casts boolean `is_active` + 3 relasi HasMany |
+| [GradeLevel](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#18-63) | Model kosong | Fillable `nama_tingkat` + relasi ke classrooms & curriculums |
+| [Classroom](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Classroom.php#18-81) | Model kosong | Fillable + relasi waliKelas (FK khusus) + semua HasMany |
+| [Subject](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Subject.php#18-43) | Model kosong | Fillable + relasi ke curriculums |
+| [Curriculum](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Curriculum.php#23-84) | Model kosong | Fillable + 5 relasi (pivot utama) |
+| [StudentHistory](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/StudentHistory.php#24-65) | Model kosong | Fillable + 3 relasi BelongsTo |
+| [TeacherAssignment](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/TeacherAssignment.php#21-79) | Model kosong | Fillable + casts is_wali_kelas + 4 relasi |
+| [Attendance](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Attendance.php#22-63) | Model kosong | Fillable + casts tanggal + 2 relasi |
+| [Grade](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Grade.php#25-67) | Model kosong | Fillable + casts float nilai + 2 relasi |
+
+### 1.2 — Fix Migrations (6 file)
+
+Migrations diselaraskan dengan PRD sebagai sumber kebenaran tunggal:
+
+| Migration | Perubahan |
+|---|---|
+| `education_levels` | `kode_tingkat` → `kode`, `nama_tingkat` → `nama` |
+| `users` | `username` → `name`+`email`; fix enum `role` sesuai PRD; tambah `email_verified_at` + `softDeletes` |
+| `academic_years` | `kuartal enum(1,2,3)` → `semester enum(Ganjil,Genap)` |
+| [classrooms](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#43-52) | Nama tabel `'classes'` → `'classrooms'` |
+| `student_histories` | FK `constrained('classes')` → `constrained('classrooms')` |
+| `teacher_assignments` | FK `constrained('classes')` → `constrained('classrooms')` |
+| [attendances](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Classroom.php#72-80) | FK `constrained('classes')` → `constrained('classrooms')` |
+
+### 1.3 — Sistem Autentikasi & RBAC
+
+**File-file baru yang dibuat:**
+
+| File | Fungsi |
+|---|---|
+| [app/Http/Middleware/RoleMiddleware.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Middleware/RoleMiddleware.php) | Guard RBAC — validasi role user vs role yang diizinkan di route |
+| [app/Http/Controllers/Auth/LoginController.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/Auth/LoginController.php) | Login (dengan session regeneration) + Logout (3 langkah keamanan) |
+| [app/Http/Controllers/DashboardController.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php) | Dashboard adaptif per role |
+| [resources/views/auth/login.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/auth/login.blade.php) | Halaman login premium (gradient indigo, animasi) |
+| [resources/views/dashboard.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/dashboard.blade.php) | Dashboard dengan sidebar navigasi dinamis per role |
+| [routes/web.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/routes/web.php) | Routes terstruktur: guest group + auth group |
+| [bootstrap/app.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/bootstrap/app.php) | Registrasi alias middleware `'role'` |
+
+### 1.4 — Seeders Data Awal
+
+**3 file seeder baru:**
+- [EducationLevelSeeder](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/database/seeders/EducationLevelSeeder.php#21-45) — 4 unit: TK, MI, MTs, Ulya
+- [UserSeeder](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/database/seeders/UserSeeder.php#23-45) — Super Admin: `superadmin@simad.sch.id`
+- [AcademicYearSeeder](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/database/seeders/AcademicYearSeeder.php#18-37) — Tahun Ajaran 2025/2026 Semester Ganjil (aktif)
+
+---
+
+## Verifikasi — Hasil `php artisan migrate:fresh --seed`
+
+```
+✅ 16/16 migrations DONE (semua tabel berhasil dibuat)
+✅ EducationLevelSeeder — TK, MI, MTs, Ulya berhasil
+✅ UserSeeder — Super Admin berhasil
+✅ AcademicYearSeeder — 2025/2026 Ganjil berhasil
+```
+
+---
+
+## Cara Login Sekarang
+
+```
+🌐 URL     : http://localhost/simad-app/public
+📧 Email   : superadmin@simad.sch.id
+🔑 Password: simad@admin2025
+```
+
+> [!CAUTION]
+> Ganti password segera setelah login pertama!
+
+---
+
+## Arsitektur Relasi Antar Model
+
+```mermaid
+erDiagram
+    EducationLevel ||--o{ GradeLevel : has
+    EducationLevel ||--o{ Student : "current_level"
+    EducationLevel ||--o{ User : scoped_to
+    GradeLevel ||--o{ Classroom : has
+    GradeLevel ||--o{ Curriculum : has
+    Classroom ||--o{ StudentHistory : in
+    Classroom ||--o{ TeacherAssignment : taught_in
+    Classroom ||--o{ Attendance : recorded_in
+    AcademicYear ||--o{ Curriculum : defines
+    AcademicYear ||--o{ StudentHistory : period
+    AcademicYear ||--o{ TeacherAssignment : period
+    Subject ||--o{ Curriculum : included_in
+    Curriculum ||--o{ Grade : scored_via
+    Curriculum ||--o{ TeacherAssignment : assigned_via
+    Student ||--o{ StudentHistory : has
+    Student ||--o{ Attendance : has
+    Student ||--o{ Grade : receives
+    WaliSantri ||--o{ Student : guardian_of
+    Teacher ||--o{ TeacherAssignment : assigned
+    User ||--o| Teacher : profile
+    User ||--o| WaliSantri : account
+```

@@ -1,0 +1,196 @@
+# 🔍 Audit Report: SIMAD App vs PRD
+
+*Tanggal Audit: 10 Maret 2026 | Senior Fullstack Dev Review*
+
+---
+
+## 📊 Ringkasan Status Saat Ini
+
+| Komponen | Status | Keterangan |
+|---|---|---|
+| **PRD** | ✅ Lengkap | 6 Bab, jelas dan komprehensif |
+| **Migrasi DB** | ✅ Lengkap | 16 file, semua tabel PRD sudah ada |
+| **Models** | ⚠️ Sebagian | 14 model ada, tapi banyak yang kosong/bug |
+| **Controllers** | ❌ Belum Ada | Hanya [Controller.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/Controller.php) base kosong |
+| **Views** | ❌ Belum Ada | Hanya [welcome.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/welcome.blade.php) bawaan Laravel |
+| **Routes** | ❌ Hampir Kosong | Hanya `/` dan `/test-relasi` |
+| **Auth (Login)** | ❌ Belum Ada | Tidak ada sistem login sama sekali |
+| **RBAC** | ❌ Belum Ada | Role guard belum diimplementasikan |
+| **Seeder** | ❌ Belum Ada | Data awal (education_levels, dll.) belum ada |
+
+---
+
+## 🐛 Bug & Error yang Ditemukan
+
+### Error 1 — [WaliSantri.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/WaliSantri.php): Missing [use](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/WaliSantri.php#16-21) statements (🔴 Fatal)
+```php
+// SEKARANG (SALAH - akan crash saat dijalankan):
+class WaliSantri extends Model {
+    public function user(): BelongsTo { ... }  // ← BelongsTo tidak di-import!
+    public function students(): HasMany { ... } // ← HasMany tidak di-import!
+}
+
+// SEHARUSNYA:
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+```
+
+### Error 2 — [Student.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Student.php): Tidak ada `SoftDeletes` (🟡 Medium)
+PRD wajibkan `deleted_at` pada [students](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/WaliSantri.php#22-27), tapi model tidak menggunakan trait `SoftDeletes`.
+```php
+// Harus ditambahkan:
+use Illuminate\Database\Eloquent\SoftDeletes;
+class Student extends Model {
+    use SoftDeletes;
+```
+
+### Error 3 — [Teacher.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Teacher.php): Model Kosong Total (🟡 Medium)
+Tidak ada `$fillable`, tidak ada `SoftDeletes`, tidak ada relasi ke [User](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/User.php#10-63) dan `TeacherAssignment`.
+
+### Error 4 — Semua Model (kecuali Student & EducationLevel): Tidak ada Relasi
+[AcademicYear](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/AcademicYear.php#7-11), `Classroom`, `Curriculum`, `Subject`, dll. — semua masih `//` kosong.
+
+### Error 5 — `routes/web.php`: Import `Student` di Route File (🟡 Kurang Tepat)
+```php
+use App\Models\Student; // ← Ini tidak lazim, seharusnya dipindah ke Controller
+```
+
+### Error 6 — `User.php`: `$fillable` Tidak Lengkap (🟡 Medium)
+Kolom `role` dan `education_level_id` (dari migrasi) tidak ada di `$fillable`.
+```php
+// Sekarang:
+protected $fillable = ['name', 'email', 'password'];
+
+// Seharusnya:
+protected $fillable = ['name', 'email', 'password', 'role', 'education_level_id'];
+```
+
+---
+
+## 🗺️ Roadmap Implementasi (Urut Prioritas)
+
+### 🔴 FASE 1 — Fondasi & Auth (Dikerjakan PERTAMA)
+*Tanpa ini, tidak ada yang bisa berjalan.*
+
+#### Langkah 1.1: Fix Semua Model yang Ada
+- [ ] Fix `WaliSantri.php` — tambah `use` statements yang hilang
+- [ ] Fix `Student.php` — tambah `SoftDeletes`, lengkapi relasi
+- [ ] Fix `Teacher.php` — tambah `$fillable`, `SoftDeletes`, relasi
+- [ ] Fix `User.php` — update `$fillable` dengan `role` & `education_level_id`
+- [ ] Lengkapi semua model lainnya (relasi, `$fillable`)
+
+#### Langkah 1.2: Buat Seeder Data Awal
+- [ ] `EducationLevelSeeder` — seed TK, MI, MTs, MA/Ulya
+- [ ] `UserSeeder` — buat akun Super Admin awal
+- [ ] `AcademicYearSeeder` — buat tahun ajaran aktif awal
+
+#### Langkah 1.3: Implementasi Sistem Autentikasi
+- [ ] Install Laravel Breeze / Fortify untuk sistem login
+- [ ] Buat `LoginController` dengan validasi role
+- [ ] Buat view `login.blade.php`
+- [ ] Implementasi middleware `RoleMiddleware` untuk RBAC
+
+---
+
+### 🟠 FASE 2 — Layout & Admin Dashboard
+*Kerangka visual yang dipakai semua halaman.*
+
+#### Langkah 2.1: Buat Layout Master
+- [ ] `layouts/app.blade.php` — layout utama (sidebar + navbar)
+- [ ] `layouts/auth.blade.php` — layout halaman login
+- [ ] Integrasikan Tailwind CSS (sudah ada di package.json)
+- [ ] Buat komponen sidebar dengan navigasi berdasarkan role
+
+#### Langkah 2.2: Dashboard per Role
+- [ ] `DashboardController` dengan logic berdasarkan `auth()->user()->role`
+- [ ] View dashboard Super Admin (statistik global)
+- [ ] View dashboard Kepala Sekolah (read-only analitik unit)
+- [ ] View dashboard Guru (akses kelas & mapel yang diampu)
+
+---
+
+### 🟡 FASE 3 — Master Data CRUD
+*Urutan penting: data yang menjadi FK harus dibuat dulu.*
+
+#### Langkah 3.1: Education Levels & Grade Levels (Dikerjakan Pertama)
+- [ ] `EducationLevelController` (CRUD)
+- [ ] `GradeLevelController` (CRUD)
+
+#### Langkah 3.2: Academic Year Management
+- [ ] `AcademicYearController` (CRUD + logic `is_active`)
+- [ ] Logic: saat set tahun ajaran aktif, nonaktifkan yang lain
+
+#### Langkah 3.3: Teacher Management (Ada percakapan sebelumnya)
+- [ ] `TeacherController` (CRUD + Import Excel)
+- [ ] Relasi ke akun User (buat user saat daftarkan guru)
+
+#### Langkah 3.4: Subject Management (Ada percakapan sebelumnya)
+- [ ] `SubjectController` (CRUD + Import Excel)
+
+#### Langkah 3.5: Wali Santri & Student Management
+- [ ] `WaliSantriController` (CRUD + Import Excel)
+- [ ] `StudentController` (CRUD + Import Excel + assign ke Wali)
+
+#### Langkah 3.6: Classroom & Assignment Management
+- [ ] `ClassroomController` (CRUD + assign Wali Kelas)
+- [ ] `TeacherAssignmentController` (assign guru ke kelas & mapel)
+
+---
+
+### 🟢 FASE 4 — Kurikulum & Core Academic Engine
+*Inti dari sistem akademik.*
+
+#### Langkah 4.1: Curriculum Mapping
+- [ ] `CurriculumController` — pemetaan mapel per tahun ajaran & tingkat kelas
+- [ ] Form yang dinamis: pilih tahun ajaran → muncul tingkat kelas → bisa tambah mapel + KKM
+
+#### Langkah 4.2: Student History & Class Promotion
+- [ ] `StudentHistoryController` — lihat & manage riwayat kelas siswa
+- [ ] **Year-End Rollover Wizard** (sudah dibahas di percakapan sebelumnya)
+- [ ] Logic kenaikan kelas: INSERT ke `student_histories`, bukan UPDATE
+- [ ] Logic kelulusan tingkat: UPDATE `current_level_id` di `students`
+
+---
+
+### 🔵 FASE 5 — Presensi, Nilai & E-Raport
+*Fitur utama yang dipakai guru setiap hari.*
+
+#### Langkah 5.1: Attendance (Presensi Harian)
+- [ ] `AttendanceController` — input per kelas per hari
+- [ ] Kalkulasi persentase kehadiran otomatis
+- [ ] View rekap presensi per siswa
+
+#### Langkah 5.2: Grade Input (Input Nilai)
+- [ ] `GradeController` — input nilai per curriculum_id
+- [ ] Form dinamis berdasarkan kurikulum tahun ajaran aktif
+- [ ] Validasi nilai vs KKM
+
+#### Langkah 5.3: E-Raport Generation
+- [ ] Install library PDF (barryvdh/laravel-dompdf)
+- [ ] Template PDF raport dinamis
+- [ ] `EraportController` — generate & download PDF
+- [ ] Logic validasi oleh Wali Kelas sebelum raport dicetak
+
+---
+
+### ⚪ FASE 6 — API untuk Mobile App (Opsional/Selanjutnya)
+*Dibangun setelah Web Admin selesai.*
+
+- [ ] Install Laravel Sanctum untuk API authentication
+- [ ] `GET /api/student/{id}/grades` — riwayat nilai
+- [ ] `GET /api/student/{id}/attendance` — riwayat presensi
+- [ ] Login WaliSantri via OTP WhatsApp (`no_whatsapp`)
+
+---
+
+## 📋 Rekomendasi Immediate Next Action
+
+> Berdasarkan kondisi saat ini, **Fase 1** adalah yang paling kritis.
+> Saya rekomendasikan untuk mulai dari:
+> 
+> **1. Fix semua Models** (±30 menit) → semua logic jadi benar  
+> **2. Buat Seeders** (±20 menit) → database bisa punya data dasar  
+> **3. Install Auth (Laravel Breeze)** (±15 menit) → sistem login jalan  
+> **4. Buat Layout Master + Dashboard** (±1-2 jam) → kerangka UI selesai  
+>
+> Setelah Fase 1 selesai, CRUD Master Data bisa dikerjakan dengan cepat.

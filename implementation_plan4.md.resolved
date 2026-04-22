@@ -1,0 +1,141 @@
+# Fase 4 — Akademik Engine: Penempatan Kelas & Year-End Rollover
+
+Fase 4 adalah **jantung operasional SIMAD** — fitur yang digunakan setiap hari oleh admin untuk mengelola penempatan santri di kelas dan menjalani transisi akhir tahun ajaran secara terstruktur.
+
+Dua komponen utama:
+1. **Penempatan Santri ke Kelas** — Assign santri aktif ke kelas di tahun ajaran aktif (`student_histories`)
+2. **Year-End Rollover Wizard** — Wizard 3 langkah untuk menutup tahun ajaran lama & membuka tahun baru
+
+---
+
+## Proposed Changes
+
+### Komponen 1 — Penempatan Santri ke Kelas
+
+#### [NEW] `StudentPlacementController.php`
+Mengelola tabel `student_histories` — bukan CRUD biasa, tapi *placement* per tahun ajaran.
+
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/StudentController.php#12-32) — Tampilkan semua santri aktif beserta status penempatannya di tahun ajaran aktif
+  - Filter per unit & kelas
+  - Tandai santri yang **belum ditempatkan** (highlight merah/kuning)
+- [store()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/TeacherController.php#32-77) — Assign santri ke kelas (buat baris baru di `student_histories`)
+- `bulkStore()` — Assign banyak santri ke kelas yang sama sekaligus
+- [update()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/TeacherController.php#84-99) — Pindahkan santri ke kelas lain (update baris di `student_histories`)
+- [destroy()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/TeacherController.php#109-121) — Hapus penempatan (hanya untuk tahun ajaran aktif)
+
+#### [MODIFY] [StudentHistory](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/StudentHistory.php#24-65) model
+- Tambah accessor `statusLabel()` + scope `currentYear()`
+
+---
+
+#### [NEW] Views `student-placements/`
+
+**[index.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/teachers/index.blade.php)**
+- Header: "Penempatan Santri — [Tahun Ajaran Aktif]"
+- Tabs per unit (MI, MTs, Ulya, TK)
+- Tabel santri: Nama | Kelas Saat Ini | Aksi (pindah/hapus)
+- Badge merah untuk santri "Belum Ditempatkan"
+- Tombol "+ Assign ke Kelas" membuka modal inline
+
+**[create.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/subjects/create.blade.php)**
+- Form pilih: Kelas (select), Santri(s) (multi-checkbox)
+- Tombol "Simpan Penempatan"
+
+---
+
+### Komponen 2 — Year-End Rollover Wizard
+
+> [!IMPORTANT]
+> Wizard ini **irreversible** setelah langkah 3 dikonfirmasi. Tampilkan peringatan jelas sebelum eksekusi final.
+
+Wizard 3 langkah berurutan — user wajib menyelesaikan satu langkah sebelum lanjut.
+
+#### [NEW] `RolloverController.php`
+
+**Step 1 — Review & Tutup Tahun Ajaran Aktif**
+- `showStep1()` — Tampilkan ringkasan tahun ajaran aktif: total santri, total kelas, santri belum dinilai/ditempatkan
+- `processStep1()` — Set `status_kenaikan` default ke semua `student_histories` yang masih `Belum Ditentukan`
+
+**Step 2 — Ikrar Status Kenaikan Santri**
+- `showStep2()` — Tabel semua santri dengan dropdown status per santri: `Naik Kelas | Tinggal Kelas | Lulus | Mutasi`
+- `processStep2()` — Bulk update `status_kenaikan` di `student_histories`
+
+**Step 3 — Buka Tahun Ajaran Baru**
+- `showStep3()` — Form buat tahun ajaran baru + preview auto-duplicate kelas
+- `processStep3()` — Eksekusi dalam `DB::transaction`:
+  1. Buat [AcademicYear](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/AcademicYear.php#18-88) baru → set aktif
+  2. Duplikasi semua `Classrooms` untuk tahun baru (struktur kelas sama)
+  3. Auto-promote santri `Naik Kelas` ke tingkat berikutnya
+  4. Update `status_aktif` santri `Lulus` → `'Lulus'`, `Mutasi` → `'Mutasi'`
+  5. Santri `Tinggal Kelas` tetap di tingkat yang sama
+
+#### [NEW] Routes Wizard
+```php
+// Rollover Wizard — berurutan
+Route::prefix('rollover')->name('rollover.')->group(function () {
+    Route::get('/',           [RolloverController::class, 'index'])->name('index');
+    Route::get('/step/1',     [RolloverController::class, 'showStep1'])->name('step1');
+    Route::post('/step/1',    [RolloverController::class, 'processStep1'])->name('step1.process');
+    Route::get('/step/2',     [RolloverController::class, 'showStep2'])->name('step2');
+    Route::post('/step/2',    [RolloverController::class, 'processStep2'])->name('step2.process');
+    Route::get('/step/3',     [RolloverController::class, 'showStep3'])->name('step3');
+    Route::post('/step/3',    [RolloverController::class, 'processStep3'])->name('step3.process');
+});
+
+// Penempatan Santri ke Kelas
+Route::resource('student-placements', StudentPlacementController::class)
+     ->only(['index', 'store', 'update', 'destroy']);
+Route::post('student-placements/bulk', [StudentPlacementController::class, 'bulkStore'])
+     ->name('student-placements.bulk');
+```
+
+#### [NEW] Views `rollover/`
+
+**[index.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/teachers/index.blade.php)** — Landing page wizard
+- Card progress tracker (Step 1 → 2 → 3)
+- Status tahun ajaran aktif
+- Tombol "Mulai Year-End Rollover"
+
+**`step1.blade.php`** — Review & tutup
+- Summary cards: total santri, total kelas, santri belum ditempatkan (⚠️)
+- Konfirmasi untuk lanjut
+
+**`step2.blade.php`** — Penetapan status kenaikan
+- Tabel per unit — dropdown status per santri
+- Tombol "Simpan & Lanjutkan"
+
+**`step3.blade.php`** — Preview & eksekusi
+- Form: nama tahun ajaran baru, periode
+- Preview list santri yang akan dipromosi/lulus
+- Tombol besar merah "🚀 Jalankan Rollover" dengan modal konfirmasi
+
+---
+
+### Sidebar Navigation Update
+
+#### [MODIFY] [layouts/app.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/layouts/app.blade.php)
+Tambah menu baru di sidebar bagian AKADEMIK:
+```
+📋 Penempatan Santri   → /student-placements
+🔄 Year-End Rollover   → /rollover
+```
+
+---
+
+## Verification Plan
+
+### Automated
+```bash
+php artisan route:list --path=rollover 2>&1
+php artisan route:list --path=student-placements 2>&1
+```
+
+### Skenario Test Browser
+1. **Penempatan**: Assign 5 santri ke Kelas 1-A → cek `student_histories` di DB
+2. **Rollover Step 1**: Verifikasi summary tampil benar
+3. **Rollover Step 2**: Ubah status 3 santri ke "Lulus", 1 ke "Tinggal Kelas"
+4. **Rollover Step 3**: Buat tahun ajaran 2026/2027, eksekusi → verifikasi:
+   - Tahun ajaran baru aktif
+   - Santri "Naik Kelas" dipromosi
+   - Santri "Lulus" status berubah
+   - Kelas terduplikasi untuk tahun baru

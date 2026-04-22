@@ -1,0 +1,181 @@
+# Fase 3 — CRUD Master Data SIMAD
+
+Implementasi CRUD lengkap untuk semua modul Master Data. Setiap modul menggunakan layout [layouts/app.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/layouts/app.blade.php) yang telah dibuat di Fase 2, sehingga tampilan konsisten tanpa perlu menulis sidebar/topbar ulang.
+
+## Strategi Eksekusi
+
+Modul dibangun **berurutan dari yang paling sedikit dependency**, agar setiap modul dapat langsung diuji:
+
+```
+Unit Pendidikan → Tahun Ajaran → Mata Pelajaran → Tingkat Kelas
+→ Kelas → Guru → Santri → Wali Santri → Kurikulum
+```
+
+---
+
+## Proposed Changes
+
+### Routes ([routes/web.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/routes/web.php))
+#### [MODIFY] [web.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/routes/web.php)
+Ganti semua route placeholder (`$comingSoon`) dengan `Route::resource(...)` yang sesungguhnya untuk setiap modul.
+
+---
+
+### Modul 1 — Unit Pendidikan (`education_levels`)
+#### [NEW] EducationLevelController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list semua unit + search
+- `create()` / `store()` — form tambah + validasi
+- `edit()` / `update()` — form edit + validasi
+- `destroy()` — soft delete (atau hard delete karena data fondasi)
+
+#### [NEW] views/education-levels/index.blade.php
+- Tabel: Kode, Nama, Jumlah Tingkat, Jumlah Santri, Actions
+- Search bar
+
+#### [NEW] views/education-levels/create.blade.php & edit.blade.php
+- Form: kode (text, max 10), nama (text, max 100)
+
+---
+
+### Modul 2 — Tahun Ajaran (`academic_years`)
+#### [NEW] AcademicYearController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list tahun ajaran (tandai yang aktif)
+- `create()` / `store()` — form tambah
+- `edit()` / `update()` — edit
+- `setActive()` — route khusus untuk toggle `is_active` (hanya 1 boleh aktif sekaligus)
+- `destroy()` — hanya bisa hapus jika bukan yang aktif
+
+#### [NEW] views/academic-years/index.blade.php
+- Tabel: Nama, Semester, Status (badge Aktif/Nonaktif), Actions + tombol "Jadikan Aktif"
+
+#### [NEW] views/academic-years/create.blade.php & edit.blade.php
+- Form: nama (ex: 2025/2026), semester (enum: Ganjil/Genap), is_active (checkbox)
+
+---
+
+### Modul 3 — Mata Pelajaran (`subjects`)
+#### [NEW] SubjectController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list semua mapel + search
+- `create()` / `store()` — tambah
+- `edit()` / `update()` — edit
+- `destroy()` — hapus (cek apakah terikat kurikulum)
+
+#### [NEW] views/subjects/index.blade.php
+- Tabel: Kode Mapel, Nama Mapel, Actions
+
+#### [NEW] views/subjects/create.blade.php & edit.blade.php
+- Form: kode_mapel (text), nama_mapel (text)
+
+---
+
+### Modul 4 — Tingkat Kelas (`grade_levels`)
+#### [NEW] GradeLevelController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list per unit pendidikan
+- `create()` / `store()` — tambah (pilih unit)
+- `edit()` / `update()` — edit
+- `destroy()` — hapus jika tidak ada kelas yang terikat
+
+#### [NEW] views/grade-levels/index.blade.php
+- Tabel: Nama Tingkat, Unit Pendidikan, Jumlah Kelas, Actions
+
+#### [NEW] views/grade-levels/create.blade.php & edit.blade.php
+- Form: education_level_id (select), nama_tingkat (text)
+
+---
+
+### Modul 5 — Kelas ([classrooms](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#43-52))
+#### [NEW] ClassroomController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list kelas, filter per unit
+- `create()` / `store()` — tambah (pilih tingkat kelas + wali kelas)
+- `edit()` / `update()` — edit
+- `destroy()` — hapus jika tidak ada student history
+
+#### [NEW] views/classrooms/index.blade.php
+- Tabel: Nama Kelas, Tingkat Kelas, Unit, Wali Kelas, Actions
+
+#### [NEW] views/classrooms/create.blade.php & edit.blade.php
+- Form: grade_level_id (select), nama_kelas (text), wali_kelas_id (select teacher)
+
+---
+
+### Modul 6 — Data Guru (`teachers`)
+#### [NEW] TeacherController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list guru aktif + search
+- `create()` / `store()` — tambah guru (sekaligus buat User jika perlu)
+- `edit()` / `update()` — edit
+- `destroy()` — soft delete
+- `toggleActive()` — toggle is_active
+
+#### [NEW] views/teachers/index.blade.php
+- Tabel: NIP, Nama Lengkap, Status (Aktif/Nonaktif), User Email, Actions
+
+#### [NEW] views/teachers/create.blade.php & edit.blade.php
+- Form: nip (text), nama_lengkap (text), alamat (text), no_hp (text)
+- Opsi buat akun User sekaligus (email + password)
+
+---
+
+### Modul 7 — Data Santri ([students](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/WaliSantri.php#57-66))
+#### [NEW] StudentController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list santri aktif + search + filter per unit
+- `create()` / `store()` — form pendaftaran santri baru
+- [show()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/Auth/LoginController.php#22-35) — profil lengkap santri + riwayat kelas
+- `edit()` / `update()` — edit data
+- `destroy()` — soft delete
+
+#### [NEW] views/students/index.blade.php
+- Tabel: NIK, NISN, Nama, Unit, Wali, Status, Actions
+
+#### [NEW] views/students/create.blade.php & edit.blade.php
+- Form lengkap sesuai PRD (nama, NIK, NISN, tempat/tanggal lahir, jenis kelamin, dll)
+
+#### [NEW] views/students/show.blade.php
+- Profil detail santri + tabel riwayat kelas dari `student_histories`
+
+---
+
+### Modul 8 — Wali Santri (`wali_santri`)
+#### [NEW] WaliSantriController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list wali + search
+- `create()` / `store()` — tambah wali
+- [show()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/Auth/LoginController.php#22-35) — profil wali + daftar santri yang diasuh
+- `edit()` / `update()` — edit
+- `destroy()` — soft delete
+
+#### [NEW] views/wali-santri/index.blade.php & create.blade.php & edit.blade.php & show.blade.php
+- Form sesuai PRD (NIK, nama, hubungan keluarga, pekerjaan, WhatsApp, alamat)
+
+---
+
+### Modul 9 — Kurikulum ([curriculums](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Subject.php#33-42))
+#### [NEW] CurriculumController.php
+- [index()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#26-62) — list per tahun ajaran + tingkat kelas
+- `create()` / `store()` — tambah mapping (tahun ajaran + tingkat kelas + mapel + KKM)
+- `edit()` / `update()` — edit KKM
+- `destroy()` — hapus mapping
+
+#### [NEW] views/curriculums/index.blade.php & create.blade.php & edit.blade.php
+- Filter per tahun ajaran dan tingkat kelas
+
+---
+
+## Verification Plan
+
+### Automated — Route List Check
+```bash
+cd /Applications/XAMPP/xamppfiles/htdocs/simad-app
+php artisan route:list --path=/ 2>&1
+```
+Pastikan semua resource routes terdaftar.
+
+### Browser Test (per modul, via browser tool)
+Untuk setiap modul:
+1. Buka URL index (mis. `http://127.0.0.1:8000/education-levels`)
+2. Klik "Tambah" → isi form → submit → verifikasi data muncul di tabel
+3. Klik "Edit" → ubah data → submit → verifikasi perubahan tersimpan
+4. Klik "Hapus" → verifikasi data hilang dari tabel
+
+### Data Integrity Check
+```bash
+php artisan tinker --execute="echo App\Models\EducationLevel::count();" 2>&1
+```

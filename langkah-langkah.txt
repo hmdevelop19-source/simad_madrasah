@@ -1,0 +1,68 @@
+Langkah Eksekusi di Terminal Mac Anda:
+Buka aplikasi Terminal bawaan Mac (atau iTerm2 jika Anda menggunakannya).
+
+# 1. Arahkan ke direktori kerja Anda.
+Jika menggunakan XAMPP:
+Bash
+cd /Applications/XAMPP/xamppfiles/htdocs
+
+Jika menggunakan Herd (misalnya membuat folder khusus bernama Projects di direktori utama):
+Bash
+cd ~/Projects
+
+# 2. Jalankan perintah instalasi Laravel:
+Bash
+composer create-project laravel/laravel simad-app
+cd simad-app
+
+# migrate:fresh akan menghapus semua tabel lama dan membangunnya kembali dengan struktur kuartal angka yang baru.
+
+# (php artisan db:seed) --seed akan langsung menyuntikkan data dummy dari DatabaseSeeder sedetik setelah tabelnya selesai dibuat.
+
+Langkah 1: Masuk ke Ruang Tinker
+Buka Terminal Mac Anda (pastikan posisinya di folder simad-app), lalu ketik perintah ini dan tekan Enter:
+
+Bash
+php artisan tinker
+(Terminal Anda akan berubah menjadi prompt > atau menampilkan versi PHP/Laravel. Ini tandanya Anda sudah masuk ke dalam "otak" aplikasi).
+
+Langkah 2: Uji Coba Relasi Ajaib
+Silakan ketik perintah-perintah di bawah ini satu per satu, dan tekan Enter setelah setiap barisnya untuk melihat hasilnya:
+
+Uji Coba 1: Memanggil Data Santri dan Menanyakan Siapa Walinya
+Ketik perintah ini untuk mengambil data santri pertama (Ahmad Santoso) dari database:
+
+PHP
+$santri = App\Models\Student::first();
+(Tinker akan menampilkan semua data Ahmad Santoso).
+
+Sekarang, mari kita panggil nama Walinya menggunakan relasi yang tadi kita buat. Ketik ini:
+
+PHP
+$santri->wali->nama_lengkap;
+(Tinker harusnya langsung menjawab dengan akurat: "Budi Santoso"! Bayangkan betapa mudahnya ini nanti saat Anda membuat halaman profil santri).
+
+Uji Coba 2: Memanggil Data Wali dan Melihat Semua Anaknya
+Ketik perintah ini untuk memanggil data Budi Santoso:
+
+PHP
+$wali = App\Models\WaliSantri::first();
+Sekarang, kita cek siapa saja anak yang ditanggung oleh wali ini (menggunakan relasi hasMany):
+
+PHP
+$wali->students;
+(Tinker akan menampilkan daftar array berisi data Ahmad Santoso. Jika Budi Santoso punya 3 anak di pesantren ini, ketiganya akan otomatis muncul di sini).
+
+Uji Coba 3: Mengecek Unit Pendidikan Santri
+Mari kita tanya ke sistem, Ahmad Santoso ini masuk di tingkat apa (MTs atau Ulya)?
+
+PHP
+$santri->level->nama_tingkat;
+(Tinker akan langsung menjawab: "Madrasah Tsanawiyah").
+
+Langkah 3: Keluar dari Tinker
+Jika Anda sudah puas melihat keajaiban logika relasi ini, Anda bisa keluar dari ruang Tinker dengan mengetik:
+
+PHP
+exit
+(Tekan Enter, dan Anda akan kembali ke terminal Mac biasa).

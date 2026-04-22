@@ -1,0 +1,108 @@
+# ✅ Walkthrough: SIMAD — Fase 1 & Fase 2
+
+---
+
+## 📸 Tampilan Aplikasi
+
+````carousel
+![Dashboard Fase 2 — layout baru, data real, ringkasan per unit](/Users/user/.gemini/antigravity/brain/d0774a0b-64ac-4dfe-83bd-c5f30f7e9a9e/dashboard_full_1773098899317.png)
+<!-- slide -->
+![Warning "Fase 3" muncul saat klik link sidebar yang belum tersedia](/Users/user/.gemini/antigravity/brain/d0774a0b-64ac-4dfe-83bd-c5f30f7e9a9e/dashboard_placeholder_msg_1773098936178.png)
+<!-- slide -->
+![Rekaman flow login dan navigasi Fase 2](/Users/user/.gemini/antigravity/brain/d0774a0b-64ac-4dfe-83bd-c5f30f7e9a9e/fase2_dashboard_verify_1773098839845.webp)
+````
+
+---
+
+## ✅ FASE 1 — Fondasi & Auth
+
+### Models yang Difix (13 model)
+| Model | Bug Lama | Fix |
+|---|---|---|
+| [WaliSantri](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/WaliSantri.php#16-67) | Missing `use BelongsTo/HasMany` → Fatal Error | Tambah use statements + SoftDeletes + fillable |
+| [Student](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Student.php#20-101) | Tidak ada SoftDeletes, relasi kurang | SoftDeletes + relasi histories, attendances, grades |
+| [Teacher](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Teacher.php#20-63) | Model kosong total | Fillable + SoftDeletes + is_active + relasi |
+| [User](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/User.php#24-112) | Fillable kurang `role`, `education_level_id` | Update fillable + helper [isSuperAdmin()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/User.php#69-78), [isGuru()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/User.php#79-87) |
+| [AcademicYear](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/AcademicYear.php#15-68) | Model kosong | Fillable + casts `is_active` boolean + 3 relasi |
+| [GradeLevel](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#18-63) | Model kosong | Fillable + relasi classrooms & curriculums |
+| [Classroom](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Classroom.php#18-81) | Model kosong | Fillable + relasi waliKelas (FK khusus) |
+| [Subject](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Subject.php#18-43) | Model kosong | Fillable + relasi curriculums |
+| [Curriculum](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Curriculum.php#23-84) | Model kosong | Fillable + 5 relasi (pivot utama sistem) |
+| [StudentHistory](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/StudentHistory.php#24-65) | Model kosong | Fillable + 3 relasi BelongsTo |
+| [TeacherAssignment](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/TeacherAssignment.php#21-79) | Model kosong | Fillable + casts + 4 relasi |
+| [Attendance](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Attendance.php#22-63) | Model kosong | Fillable + casts tanggal |
+| [Grade](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Grade.php#25-67) | Model kosong | Fillable + casts float nilai |
+
+### Migrations yang Difix (6 file)
+| Migration | Perubahan |
+|---|---|
+| `education_levels` | `kode_tingkat/nama_tingkat` → `kode/nama` |
+| `users` | `username` → `name+email`; fix enum role; tambah softDeletes |
+| `academic_years` | `kuartal enum(1,2,3)` → `semester enum(Ganjil,Genap)` |
+| [classrooms](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#43-52) | Nama tabel `'classes'` → `'classrooms'` |
+| `student_histories` | FK `classes` → [classrooms](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#43-52) |
+| `teacher_assignments` | FK `classes` → [classrooms](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#43-52) |
+| [attendances](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/Student.php#83-91) | FK `classes` → [classrooms](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Models/GradeLevel.php#43-52) |
+
+### File Baru Auth System
+| File | Fungsi |
+|---|---|
+| [RoleMiddleware.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Middleware/RoleMiddleware.php) | Guard RBAC — validasi role di setiap route |
+| [LoginController.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/Auth/LoginController.php) | Login + Logout dengan session security |
+| [DashboardController.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php) | Dashboard adaptif per role |
+| [auth/login.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/auth/login.blade.php) | Halaman login premium |
+| [dashboard.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/dashboard.blade.php) | Dashboard dengan sidebar per role |
+
+### Seeders
+- [EducationLevelSeeder](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/database/seeders/EducationLevelSeeder.php#21-45) — 4 unit: TK, MI, MTs, Ulya
+- [UserSeeder](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/database/seeders/UserSeeder.php#23-45) — Super Admin: `superadmin@simad.sch.id`
+- [AcademicYearSeeder](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/database/seeders/AcademicYearSeeder.php#18-37) — Tahun Ajaran 2025/2026 Ganjil
+
+### Verifikasi Fase 1
+```
+✅ php artisan migrate:fresh --seed — BERHASIL (16 tabel, 0 error)
+✅ Login superadmin berhasil
+✅ Redirect ke dashboard berfungsi
+```
+
+---
+
+## ✅ FASE 2 — Layout Master & Dashboard Data Real
+
+### File Baru
+| File | Fungsi |
+|---|---|
+| [layouts/app.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/layouts/app.blade.php) | **Layout master reusable** — design system CSS variables, sidebar dinamis per role, topbar dengan info tahun ajaran aktif, flash messages global, semua komponen UI |
+| [layouts/auth.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/layouts/auth.blade.php) | Layout minimalis untuk halaman login/register |
+| [errors/403.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/errors/403.blade.php) | Halaman error Forbidden (RBAC) |
+| [errors/404.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/errors/404.blade.php) | Halaman error Not Found |
+
+### Perubahan File
+| File | Perubahan |
+|---|---|
+| [dashboard.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/dashboard.blade.php) | Refactor → `@extends('layouts.app')`, data real dari DB, tabel ringkasan per unit, hero card |
+| [auth/login.blade.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/resources/views/auth/login.blade.php) | Refactor → `@extends('layouts.auth')`, DRY & clean |
+| [DashboardController.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php) | Query data real: [getGlobalStats()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#63-85) + [getUnitStats()](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/app/Http/Controllers/DashboardController.php#86-118) per role |
+| [routes/web.php](file:///Applications/XAMPP/xamppfiles/htdocs/simad-app/routes/web.php) | Tambah route placeholder Fase 3 agar sidebar tidak error |
+
+### Verifikasi Fase 2
+```
+✅ Dashboard tampil dengan layout baru (sidebar, topbar)
+✅ Topbar menampilkan "2025/2026 — Ganjil" dari database
+✅ Tabel "Ringkasan per Unit": TK, MI, MTs, Ulya tampil (data real)
+✅ Klik "Data Guru" di sidebar → pesan "Fase 3 segera hadir" muncul
+✅ Error pages 403 & 404 siap
+```
+
+---
+
+## 🔑 Credentials Login
+
+```
+🌐 URL     : http://127.0.0.1:8000
+📧 Email   : superadmin@simad.sch.id
+🔑 Password: simad@admin2025
+```
+
+> [!CAUTION]
+> Ganti password setelah login pertama!
