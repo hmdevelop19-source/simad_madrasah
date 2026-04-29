@@ -27,7 +27,6 @@ class AcademicYearSeeder extends Seeder
 
         AcademicYear::create([
             'nama'      => '2025/2026',
-            'periode'   => 'Ganjil',    // Enum: Ganjil, Genap, Kuartal 1-4
             'is_active' => true,
         ]);
 

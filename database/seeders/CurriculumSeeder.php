@@ -67,6 +67,6 @@ class CurriculumSeeder extends Seeder
             }
         }
 
-        $this->command->info("✅ Kurikulum berhasil di-seed ({$total} entri untuk {$activeYear->nama} — {$activeYear->periode}).");
+        $this->command->info("✅ Kurikulum berhasil di-seed ({$total} entri untuk {$activeYear->nama}).");
     }
 }

@@ -57,9 +57,15 @@
                 <input type="password" name="password" id="password"
                     placeholder="••••••••"
                     required autocomplete="current-password"
-                    style="width:100%;padding:.75rem 1rem .75rem 2.75rem;border:1.5px solid #E2E8F0;border-radius:10px;font-size:.9375rem;color:#1E293B;background:#F8FAFC;outline:none;font-family:Inter,sans-serif;transition:border-color .2s,box-shadow .2s;"
+                    style="width:100%;padding:.75rem 2.75rem .75rem 2.75rem;border:1.5px solid #E2E8F0;border-radius:10px;font-size:.9375rem;color:#1E293B;background:#F8FAFC;outline:none;font-family:Inter,sans-serif;transition:border-color .2s,box-shadow .2s;"
                     onfocus="this.style.borderColor='#4F46E5';this.style.boxShadow='0 0 0 3px rgba(79,70,229,.12)'"
                     onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'">
+                <button type="button" 
+                    style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;font-size:1.1rem;color:#94A3B8;display:flex;align-items:center;"
+                    onclick="const pwd = document.getElementById('password'); const isPass = pwd.type === 'password'; pwd.type = isPass ? 'text' : 'password'; this.innerHTML = isPass ? '🙈' : '👁️';"
+                    title="Tampilkan/Sembunyikan password">
+                    👁️
+                </button>
             </div>
         </div>
 

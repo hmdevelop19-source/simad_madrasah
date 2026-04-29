@@ -29,15 +29,16 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             EducationLevelSeeder::class,  // 1️⃣  Unit Pendidikan (TK, MI, MTs, Ulya)
-            UserSeeder::class,            // 2️⃣  Akun Super Admin
-            AcademicYearSeeder::class,    // 3️⃣  Tahun Ajaran aktif 2025/2026
-            SubjectSeeder::class,         // 4️⃣  Mata Pelajaran (15 mapel)
-            TeacherSeeder::class,         // 5️⃣  Data Guru (10 guru, 8 dengan akun login)
-            GradeLevelSeeder::class,      // 6️⃣  Tingkat Kelas (2 per unit kecuali RA)
-            ClassroomSeeder::class,       // 7️⃣  Kelas/Rombel (A & B per tingkat)
-            WaliSantriSeeder::class,      // 8️⃣  Data Wali Santri (15 wali)
-            StudentSeeder::class,         // 9️⃣  Data Santri (30 santri)
-            CurriculumSeeder::class,      // 🔟 Pemetaan Kurikulum
+            RolePermissionSeeder::class,  // 2️⃣  Roles and Permissions
+            UserSeeder::class,            // 3️⃣  Akun Super Admin
+            AcademicYearSeeder::class,    // 4️⃣  Tahun Ajaran aktif 2025/2026
+            SubjectSeeder::class,         // 5️⃣  Mata Pelajaran (15 mapel)
+            TeacherSeeder::class,         // 6️⃣  Data Guru (10 guru, 8 dengan akun login)
+            GradeLevelSeeder::class,      // 7️⃣  Tingkat Kelas (2 per unit kecuali RA)
+            ClassroomSeeder::class,       // 8️⃣  Kelas/Rombel (A & B per tingkat)
+            WaliSantriSeeder::class,      // 9️⃣  Data Wali Santri (15 wali)
+            StudentSeeder::class,         // 🔟 Data Santri (30 santri)
+            CurriculumSeeder::class,      // 11 Pemetaan Kurikulum
         ]);
 
         $this->command->newLine();

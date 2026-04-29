@@ -46,7 +46,7 @@ class RolePermissionSeeder extends Seeder
             'view-presensi', 'create-presensi', 'edit-presensi', 'delete-presensi', 'approve-presensi',
             'view-nilai', 'create-nilai', 'edit-nilai', 'delete-nilai', 'approve-nilai',
             'view-kepribadian', 'create-kepribadian', 'edit-kepribadian', 'delete-kepribadian', 'approve-kepribadian',
-            'view-raport', 'create-raport', 'edit-raport', 'delete-raport', 'approve-raport',
+            'view-raport', 'create-raport', 'edit-raport', 'delete-raport', 'approve-raport', 'print-reports',
 
             // Sistem & Keamanan
             'manage-hak-akses',
